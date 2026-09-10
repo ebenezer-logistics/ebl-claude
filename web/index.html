@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Claude at EBL | Ebenezer Logistics</title>
+<meta name="theme-color" content="#10305F">
+<link rel="icon" href="/go/logo.png">
+<style>
+  :root{--navy:#10305F;--blue:#1B4F9C;--blue-lite:#E7EFF9;--ink:#12203A;--ink-2:#4A5B75;--ink-3:#77879E;--line:#D8E1EB;--bg:#F6F8FB;--r:10px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.55}
+  .wrap{max-width:640px;margin:0 auto;padding:18px 18px 56px}
+  header{display:flex;align-items:center;gap:10px;padding:6px 0 22px}
+  header img{width:114px;height:38px;object-fit:contain;object-position:left center;display:block}
+  header .co{font-size:12px;color:var(--ink-3);line-height:1.25}
+  header .co b{display:block;color:var(--navy);font-size:13.5px}
+  h1{font-size:30px;line-height:1.12;letter-spacing:-.02em;margin:0 0 8px;color:var(--navy)}
+  .sub{font-size:16.5px;color:var(--ink-2);margin:0 0 24px}
+  .step{display:flex;gap:14px;margin:0 0 22px}
+  .n{flex:none;width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .step h2{font-size:18px;margin:4px 0 6px;color:var(--navy)}
+  .step p{margin:0 0 8px;color:var(--ink-2)}
+  .cmd{display:flex;align-items:stretch;border:1.5px solid var(--line);border-radius:var(--r);background:#fff;overflow:hidden;margin:8px 0}
+  .cmd code{flex:1;padding:14px 14px;font-family:Consolas,"Courier New",monospace;font-size:15px;color:var(--ink);word-break:break-all}
+  .cmd button{border:0;background:var(--blue);color:#fff;font-weight:600;padding:0 16px;cursor:pointer;font-size:14px}
+  .cmd button:active{background:var(--navy)}
+  .path{font-family:Consolas,"Courier New",monospace;font-size:14px;background:var(--blue-lite);padding:2px 6px;border-radius:5px;color:var(--navy)}
+  .say{display:inline-block;background:var(--blue-lite);color:var(--navy);font-weight:600;padding:2px 8px;border-radius:6px}
+  .qr{text-align:center;margin:30px 0 8px;padding:22px 0 0;border-top:1px solid var(--line)}
+  .qr img{width:174px;height:174px;image-rendering:pixelated;display:block;margin:0 auto 8px}
+  .qr p{font-size:13.5px;color:var(--ink-3);margin:0}
+  .fine{margin:28px 0 0;padding:16px 0 0;border-top:1px solid var(--line);font-size:13.5px;color:var(--ink-2);line-height:1.7}
+  .fine b{color:var(--ink)}
+  @media print{.cmd button{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="/go/logo.png" alt="Ebenezer Logistics">
+    <div class="co"><b>Ebenezer Logistics</b>Claude at EBL</div>
+  </header>
+
+  <h1>Set up Claude for EBL work</h1>
+  <p class="sub">Two minutes, once per computer. After this, anything you build with Claude for EBL can be put on the company shelf with one sentence.</p>
+
+  <div class="step"><div class="n">1</div><div>
+    <h2>Install the EBL skill</h2>
+    <p>Open PowerShell (press Start, type <b>PowerShell</b>, Enter). Paste this line and press Enter:</p>
+    <div class="cmd"><code id="line">irm https://ebl.sg/claude/install.ps1 | iex</code><button onclick="copyLine()" id="cp">Copy</button></div>
+    <p>You can also paste it into Claude Code and say "run this in PowerShell". Run it again any time to update.</p>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div>
+    <h2>Save your settings file</h2>
+    <p>Alif gives you a small file with your own login. Save it as <span class="path">C:\Users\&lt;you&gt;\.ebl\publish.env</span>. Never paste it into a chat or put it in a project folder.</p>
+  </div></div>
+
+  <div class="step"><div class="n">3</div><div>
+    <h2>Check</h2>
+    <p>Open Claude Code anywhere and say <span class="say">ebl check</span>. Four lines, all ok, then READY.</p>
+  </div></div>
+
+  <div class="step"><div class="n">&#10003;</div><div>
+    <h2>Using it</h2>
+    <p>In any project folder, say <span class="say">publish to EBL</span>. Claude reads the folder, writes a one-page description, shows it to you, and asks before sending anything. Say it again whenever the project changes. <span class="say">ebl status</span> checks on it later.</p>
+    <p>Your chats are never sent. Personal projects send only their one-page description; the content stays on your PC.</p>
+  </div></div>
+
+  <div class="qr">
+    <img src="qr.png" alt="QR code for ebl.sg/claude">
+    <p>ebl.sg/claude</p>
+  </div>
+
+  <div class="fine">
+    <b>Why this exists.</b> EBL wants to keep the brain of every bot and automation built for the company, so that if you are away or move on, the company still knows what exists, how it works and how to rebuild it. The skill contains no passwords and no server details; your settings file is what gives it access, and only Alif issues those.
+    Questions: alif@ebl.sg.
+  </div>
+</div>
+<script>
+function copyLine(){var t=document.getElementById('line').textContent;var b=document.getElementById('cp');
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1600)},
+  function(){var r=document.createRange();r.selectNodeContents(document.getElementById('line'));var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Select + Ctrl+C'});}
+</script>
+</body>
+</html>
