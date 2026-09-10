@@ -50,7 +50,8 @@ def main():
     run(c, f"chown -R www-data:www-data {REMOTE} && chmod -R a+rX {REMOTE}")
     code, o, _ = run(c, f"grep -c 'location = /claude/install.ps1' {NGINX}")
     if o.strip() == "0":
-        run(c, f"cp {NGINX} {NGINX}.bak-$(date +%Y%m%d%H%M%S)")
+        # backups go OUTSIDE sites-enabled; nginx includes every file in that folder
+        run(c, f"mkdir -p /root/nginx-backups && cp {NGINX} /root/nginx-backups/ebl-site.bak-$(date +%Y%m%d%H%M%S)")
         # insert the block just before the /assets/ location, inside the https server block
         sftp = c.open_sftp()
         with sftp.open(NGINX) as fh: conf = fh.read().decode()
