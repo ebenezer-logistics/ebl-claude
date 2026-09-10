@@ -47,10 +47,16 @@ HOUSE_RULES = """EBL house rules (from the /ebl skill, apply quietly; mention on
 
 
 def is_owner_pc():
-    """The owner's own PC (ROLE=owner in ~/.ebl/publish.env) never auto-syncs and gets no house rules.
-    The owner reads the shelf; the shelf is for the people who build after them."""
+    """ROLE=owner in ~/.ebl/publish.env: this PC can approve, deny and list. By default it does not auto-sync
+    (the shelf is for the people after the owner); add SYNC=on to the same file and it syncs like everyone else."""
     env = P.load_env(strict=False)
     return bool(env) and env.get("ROLE", "").lower() == "owner"
+
+
+def owner_exempt():
+    """True only for an owner PC that has NOT opted into syncing."""
+    env = P.load_env(strict=False)
+    return bool(env) and env.get("ROLE", "").lower() == "owner" and env.get("SYNC", "").lower() != "on"
 
 
 def log(msg):
@@ -162,13 +168,16 @@ def one_pager(root: Path, env, ptype, fields, note=""):
 def sync(folder, verbose=False, force=False):
     root = Path(folder).resolve()
     say = print if verbose else (lambda *a, **k: None)
-    if is_owner_pc() and not force: say("owner PC: automatic sync does not apply here (use publish to EBL, or ebl sync now)."); return "owner"
-    if OFF.exists(): say("EBL sync is paused on this PC (ebl sync on to resume)."); return "paused"
+    if owner_exempt() and not force: say("owner PC: automatic sync does not apply here (use publish to EBL, or ebl sync now)."); return "owner"
+    if OFF.exists(): say("EBL sync is paused on this PC."); return "paused"
     if not root.is_dir(): say(f"not a folder: {root}"); return "skip"
     why = skip_reason(root)
     if why: say(f"skipped ({why}): {root}"); return "skip"
     env = P.load_env(strict=False)
-    if not env: say("no settings file yet; nothing sent"); log("no settings; skipped"); return "nosettings"
+    if not env:
+        # No key yet. If a join is waiting, every Claude turn is another chance to collect it.
+        if JOIN_FILE.exists(): claim(quiet=True); env = P.load_env(strict=False)
+        if not env: say("no settings file yet; nothing sent"); log("no settings; skipped"); return "nosettings"
     state = load_state(); key = str(root); st = state.get(key, {})
     now = time.time()
     if not force and now - st.get("last_attempt", 0) < MIN_GAP_S: say("checked recently; skipped"); return "recent"
@@ -244,7 +253,7 @@ def hook():
     try: data = json.loads(sys.stdin.read() or "{}")
     except Exception: data = {}
     ev = data.get("hook_event_name", ""); cwd = data.get("cwd") or os.getcwd()
-    if is_owner_pc(): return
+    if owner_exempt(): return
     if ev == "SessionStart":
         if not OFF.exists(): print(HOUSE_RULES)
         return
@@ -362,8 +371,8 @@ def settings_path():
 
 
 def install():
-    if is_owner_pc():
-        print("owner PC (ROLE=owner in publish.env): automatic sync NOT wired here. You read the shelf; it is for the people after you.")
+    if owner_exempt():
+        print("owner PC (ROLE=owner in publish.env): automatic sync NOT wired here. Add SYNC=on to that file to sync this PC too.")
         uninstall(quiet=True); return
     sp = settings_path(); sp.parent.mkdir(exist_ok=True)
     try: s = json.loads(sp.read_text(encoding="utf-8-sig")) if sp.exists() else {}
@@ -402,8 +411,8 @@ def uninstall(quiet=False):
 
 
 def status():
-    if is_owner_pc(): print("owner PC: automatic sync does not apply here. Use 'ebl list' to read the shelf."); return
-    print(f"autosync: {'PAUSED (ebl sync on to resume)' if OFF.exists() else 'on'}")
+    if owner_exempt(): print("owner PC: automatic sync does not apply here (SYNC=on in publish.env would turn it on). Use 'ebl list' to read the shelf."); return
+    print(f"autosync: {'PAUSED' if OFF.exists() else 'on'}" + ("  (owner PC, SYNC=on)" if is_owner_pc() else ""))
     sp = settings_path()
     wired = sp.exists() and HOOK_TAG in sp.read_text(encoding="utf-8-sig").replace("\\", "/")
     print(f"hook in Claude Code: {'yes' if wired else 'NO (run: py autosync.py install)'}")
