@@ -32,14 +32,19 @@ New-Item -ItemType Directory -Force -Path $eblDir | Out-Null
 $ver = (Select-String -Path (Join-Path $target "scripts\publish.py") -Pattern '^VERSION = "([^"]+)"').Matches[0].Groups[1].Value
 Write-Host "  skill installed: $target  (version $ver)" -ForegroundColor Green
 
-# Python + paramiko
+# Python + paramiko. From here on, programs may print warnings to their error stream; Windows PowerShell 5.1
+# would treat that as fatal under "Stop", so relax it. Nothing below can leave the PC half-installed.
+$ErrorActionPreference = "Continue"
 $py = Get-Command py -ErrorAction SilentlyContinue
 if (-not $py) { $py = Get-Command python -ErrorAction SilentlyContinue }
 if ($py) {
-  & $py.Source -c "import paramiko" 2>$null
+  # Quiet check: prints nothing, exit code 1 if the library is missing.
+  & $py.Source -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('paramiko') else 1)"
   if ($LASTEXITCODE -ne 0) {
     Write-Host "  installing the one Python library it needs (paramiko)..."
-    & $py.Source -m pip install --quiet --disable-pip-warnings paramiko
+    & $py.Source -m pip install --quiet --disable-pip-version-check paramiko
+    & $py.Source -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('paramiko') else 1)"
+    if ($LASTEXITCODE -ne 0) { Write-Host "  could not install paramiko. In this window run:  py -m pip install paramiko   then run the install line again." -ForegroundColor Yellow; return }
   }
   Write-Host "  python: ok" -ForegroundColor Green
   # Wire the automatic sync: a Claude Code hook after each turn + a nightly task. Safe to repeat.
