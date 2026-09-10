@@ -18,7 +18,7 @@ $zip = Join-Path $tmp "ebl-claude.zip"
 Invoke-WebRequest -Uri $zipUrl -OutFile $zip -UseBasicParsing
 Expand-Archive -Path $zip -DestinationPath $tmp -Force
 $src = Join-Path $tmp "ebl-claude-main\skills\ebl"
-if (-not (Test-Path (Join-Path $src "SKILL.md"))) { throw "Download looked wrong (no SKILL.md). Try again or tell Alif." }
+if (-not (Test-Path (Join-Path $src "SKILL.md"))) { throw "Download looked wrong (no SKILL.md). Try again or tell the EBL admin." }
 
 New-Item -ItemType Directory -Force -Path $skills | Out-Null
 if (Test-Path $target) { Remove-Item -Recurse -Force $target }
@@ -56,7 +56,7 @@ if (Test-Path $envFile) {
   Write-Host ""
   Write-Host "Done. Nothing else to do." -ForegroundColor Cyan
 } elseif (Test-Path $joinFile) {
-  Write-Host "  a request is already waiting for Alif's approval; checking..." -ForegroundColor Yellow
+  Write-Host "  a request is already waiting for EBL's approval; checking..." -ForegroundColor Yellow
   if ($py) { & $py.Source $auto claim }
 } elseif ($py) {
   # First time on this PC: ask for a space. Name, @ebl.sg email, the code from that mailbox. Then nothing, ever again.

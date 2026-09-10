@@ -38,7 +38,7 @@ def env_path():
 def load_env(strict=True):
     p = env_path()
     if not p.exists():
-        if strict: sys.exit(f"MISSING SETTINGS: {p} does not exist. Ask Alif for your EBL settings file and save it there.")
+        if strict: sys.exit(f"MISSING SETTINGS: {p} does not exist. Run the install line from https://ebl.sg/claude to request your EBL space.")
         return None
     env = {}
     for line in p.read_text(encoding="utf-8-sig").splitlines():
@@ -149,7 +149,7 @@ def do_publish(env, folder):
     if ptype == "personal" and fingerprints:
         print("CANNOT BE PERSONAL: these files mention EBL, its domain, its data or its systems, so this is a work project.")
         for f in fingerprints[:15]: print("   ", f)
-        print("Change the type line to  | type | work |  and publish again. If you believe this is wrong, tell Alif.")
+        print("Change the type line to  | type | work |  and publish again. If you believe this is wrong, tell the EBL admin.")
         sys.exit(3)
     if ptype == "work" and refused:
         print("REFUSED: these files look like they contain a key or password. Move the secret out or add the file to .publishignore, then run again:")
@@ -162,7 +162,7 @@ def do_publish(env, folder):
     c = connect(env)
     code, o, e = run(c, f"test -d {posixpath.join(SHELF, env['USER'])} && echo ok || echo missing")
     if "ok" not in o:
-        sys.exit(f"Your shelf {posixpath.join(SHELF, env['USER'])} does not exist on the server yet. Ask Alif to create it.")
+        sys.exit(f"Your shelf {posixpath.join(SHELF, env['USER'])} does not exist on the server yet. Ask the EBL admin to create it.")
     sftp = c.open_sftp(); sftp_mkdirs(sftp, dest)
     n = 0
     for rel in files:
@@ -270,17 +270,17 @@ def do_check():
         print("paramiko: MISSING. Run:  py -m pip install paramiko"); ok = False
     env = load_env(strict=False)
     if not env:
-        print(f"settings: MISSING at {env_path()}. Ask Alif for your EBL settings file."); return 1
+        print(f"settings: MISSING at {env_path()}. Run the install line from https://ebl.sg/claude to request your EBL space."); return 1
     print(f"settings: ok ({env['OWNER_NAME']}, server user {env['USER']})")
     if not ok: return 1
     try:
         c = connect(env)
     except Exception as ex:
-        print(f"server: CANNOT CONNECT ({ex.__class__.__name__}). Check internet, or ask Alif to check your login."); return 1
+        print(f"server: CANNOT CONNECT ({ex.__class__.__name__}). Check internet, or ask the EBL admin to check your login."); return 1
     code, o, e = run(c, f"test -d {SHELF}/{env['USER']} && echo ok || echo missing")
     c.close()
     if "ok" in o: print(f"server + shelf: ok ({SHELF}/{env['USER']})")
-    else: print(f"shelf: MISSING on the server. Ask Alif to create {SHELF}/{env['USER']}."); return 1
+    else: print(f"shelf: MISSING on the server. Ask the EBL admin to create {SHELF}/{env['USER']}."); return 1
     print("READY. Say 'publish to EBL' in any project folder.")
     return 0
 

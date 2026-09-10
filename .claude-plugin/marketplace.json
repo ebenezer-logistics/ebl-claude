@@ -1,6 +1,6 @@
 {
   "name": "ebl",
-  "owner": { "name": "Ebenezer Logistics", "email": "alif@ebl.sg" },
+  "owner": { "name": "Ebenezer Logistics" },
   "plugins": [
     {
       "name": "ebl",

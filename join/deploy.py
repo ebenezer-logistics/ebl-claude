@@ -2,7 +2,7 @@
 
 - copies ebl-join.py to /root/ebl-join/
 - writes /root/ebl-join/config.json ONCE (never overwrites): Brevo key from ~/.ebl/BREVO-API-KEY.txt, sender address,
-  Alif's DM number, the fleet bot outbox path, server address, a random admin token
+  the admin's WhatsApp number, the fleet bot outbox path, server address, a random admin token
 - adds two nginx locations once (/api/ebl-join/ and /claude/approve/ -> 127.0.0.1:8096), tests, reloads
 - starts or restarts the pm2 process ebl-join (its own process; restarting it touches no bot)
 Login from ~/.ebl/deploy.env. Usage: py deploy.py [--sender you@ebl.sg]
@@ -17,12 +17,13 @@ for line in (EBL_DIR / "deploy.env").read_text(encoding="utf-8-sig").splitlines(
     if "=" in line and not line.strip().startswith("#"):
         k, v = line.split("=", 1); vals[k.strip()] = v.strip()
 HOST, USER, PASSWORD = vals["HOST"], vals["USER"], vals["PASSWORD"]
-SENDER = sys.argv[sys.argv.index("--sender") + 1] if "--sender" in sys.argv else "alif@ebl.sg"
+if "--sender" not in sys.argv: sys.exit("usage: py deploy.py --sender <verified Brevo sender @ebl.sg>")
+SENDER = sys.argv[sys.argv.index("--sender") + 1]
 HERE = Path(__file__).resolve().parent
 REMOTE = "/root/ebl-join"
 NGINX = "/etc/nginx/sites-enabled/ebl-site"
 BLOCK = """
-    # EBL join service: space requests from new Claude users + Alif's approve page (11/09/2026).
+    # EBL join service: space requests from new Claude users + the admin's approve page (11/09/2026).
     # Own pm2 process (ebl-join) on 8096, separate from every bot.
     location ^~ /api/ebl-join/ {
         proxy_pass http://127.0.0.1:8096;
@@ -58,7 +59,7 @@ def main():
     if "yes" in o:
         print("config.json already there; left untouched")
     else:
-        cfg = {"_note": "EBL join service. Never commit. brevoApiKey = Brevo (Sendinblue) transactional API. alertDm = Alif's WhatsApp.",
+        cfg = {"_note": "EBL join service. Never commit. brevoApiKey = Brevo (Sendinblue) transactional API. alertDm = the admin's WhatsApp.",
                "brevoApiKey": key, "senderEmail": SENDER, "senderName": "Ebenezer Logistics",
                "alertDm": "6587673656", "outboxPath": "/root/fleet-query-bot/manual-outbox.jsonl",
                "host": HOST, "publicBase": "https://ebl.sg", "adminToken": secrets.token_urlsafe(32)}

@@ -24,7 +24,7 @@ Nothing has to be said. The installer wires two things into the PC:
   keep `PROJECT.md` current in any folder that is a real project, create it without being asked, and decide the
   `type` line yourself.
 
-**Owner's PC:** if the settings file has `ROLE=owner` (Alif), none of the automatic parts apply: no hook, no
+**Owner's PC:** if the settings file has `ROLE=owner` (the shelf owner), none of the automatic parts apply: no hook, no
 nightly task, no house rules. The owner reads the shelf with "ebl list"; the shelf is for the people after them.
 
 So the manual "publish" below is now the exception: use it when the user wants the description written carefully
@@ -37,7 +37,7 @@ now, or wants to see exactly what goes up.
 | `/ebl`, "publish to EBL", "register this", "update the EBL record" | **Publish** the current project folder now, with a carefully written PROJECT.md (procedure below) |
 | "ebl status" | Show what the shelf holds for this project and, if it declares a process, whether it is online |
 | "ebl list" | (owner only) Table every project on the shelf from every builder, with flags |
-| "join EBL", "I need an EBL space", or `check` says settings MISSING and there is no request in progress | **Join** (below): ask their full name, then their @ebl.sg email, run `autosync.py join --name .. --email ..`; ask for the six-digit code from that mailbox, run `autosync.py join-code <code>`. Then tell them: Alif has been asked, the PC finishes on its own, nothing more to do |
+| "join EBL", "I need an EBL space", or `check` says settings MISSING and there is no request in progress | **Join** (below): ask their full name, then their @ebl.sg email, run `autosync.py join --name .. --email ..`; ask for the six-digit code from that mailbox, run `autosync.py join-code <code>`. Then tell them: EBL has been asked, the PC finishes on its own, nothing more to do |
 | "ebl check", "set me up for EBL" | Run `check`, then `autosync.py status`, and walk them through anything missing |
 | owner only: "ebl requests", "approve <email>", "deny <email>" | `autosync.py requests` / `approve <email>` / `deny <email>`. Fallback for when the WhatsApp Approve link is not to hand |
 | "ebl sync off" / "ebl sync on" | `autosync.py off` / `on`. Pauses or resumes all automatic syncing on this PC. Confirm in one line |
@@ -57,14 +57,14 @@ The installer normally does this in PowerShell right after the paste. If it coul
 came to you first), do it in chat, one question at a time: full name, then @ebl.sg email. Run
 `autosync.py join --name "<name>" --email <email>`. A six-digit code is emailed to that mailbox (proof they own it).
 Ask for the code, run `autosync.py join-code <code>`. From then on the PC checks every ten minutes on its own;
-when Alif taps Approve on his phone, the key arrives, the settings file is written, automatic sync is wired.
-Tell the user plainly: "Alif has been asked. Your PC will finish by itself. Nothing to do." Never ask anyone to
+when the EBL admin taps Approve on their phone, the key arrives, the settings file is written, automatic sync is wired.
+Tell the user plainly: "EBL has been asked. Your PC will finish by itself. Nothing to do." Never ask anyone to
 paste a password or a settings file into the chat. Never write a password into any file yourself.
 
 ## Check
 
 Run `check`. Four lines: python and paramiko, settings, server, shelf. If settings are missing and no request is
-in progress, go to Joining. If the shelf is missing, only Alif can create it. When `check` prints READY, say so.
+in progress, go to Joining. If the shelf is missing, only the EBL admin can create it. When `check` prints READY, say so.
 
 ## Procedure for publishing
 
@@ -118,6 +118,7 @@ NEW or UPDATED, anything untouched for 90 days STALE, and repeat any flags in pl
   for another customer" are the point of the whole exercise.
 - A skill folder someone wrote for EBL is a project too. Publish it the same way; its SKILL.md is the recipe.
 - Chats are private. Never summarise or upload a conversation.
+- Never name the EBL admin to a user. Say "the EBL admin" or "EBL".
 - Dates day/month/year, Singapore time.
 
 ## Files in this skill

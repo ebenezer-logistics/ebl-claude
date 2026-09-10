@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """EBL join service. Lets a new EBL Claude user request their space on the shelf, proves they own an @ebl.sg
-mailbox (six-digit code by email), pings Alif on WhatsApp with an Approve link, and, once Alif taps Approve,
+mailbox (six-digit code by email), pings the EBL admin on WhatsApp with an Approve link, and, once they tap Approve,
 creates their Linux user and shelf folder and hands their key to their PC exactly once.
 
 Runs as root under pm2 (name ebl-join) on 127.0.0.1:8096, behind nginx:
     /api/ebl-join/*   -> this service (start, verify, claim, admin)
-    /claude/approve/* -> this service (the approve page Alif taps)
+    /claude/approve/* -> this service (the approve page the admin taps)
 Separate process from every bot on purpose. If it dies, nothing else notices.
 
 Config: /root/ebl-join/config.json  (brevoApiKey, senderEmail, senderName, alertDm, outboxPath, host, publicBase, adminToken)
@@ -158,7 +158,7 @@ class H(BaseHTTPRequestHandler):
             link = f"{CONFIG['publicBase']}/claude/approve/{r['approval_token']}"
             whatsapp(f"🆕 EBL space request\n\n{r['name']}\n{r['email']}\nfrom PC {r['pc'] or '?'}\n\nMailbox verified. Tap to approve or deny:\n{link}")
             events(f"JOIN requested {r['email']} ({r['name']}) from {r['pc']}")
-            log(f"verified {r['email']}; approval link sent to Alif"); return self.send(200, {"ok": True, "status": "pending"})
+            log(f"verified {r['email']}; approval link sent to the admin"); return self.send(200, {"ok": True, "status": "pending"})
         if p == "/api/ebl-join/admin/decide":
             if not secrets.compare_digest(str(b.get("token", "")), CONFIG["adminToken"]): return self.send(403, {"error": "no"})
             r = next((x for x in d.values() if x.get("email") == b.get("email") or x.get("ticket") == b.get("ticket")), None)

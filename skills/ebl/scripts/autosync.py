@@ -16,7 +16,7 @@ Usage:
   py autosync.py off | on       pause / resume all automatic syncing on this PC
   py autosync.py status         what is paused, what was synced, when
   py autosync.py join --name "Full Name" --email you@ebl.sg   ask for an EBL space (emails a 6-digit code)
-  py autosync.py join-code 123456                             prove the mailbox; Alif gets an Approve link
+  py autosync.py join-code 123456                             prove the mailbox; the EBL admin gets an Approve link
   py autosync.py claim          (every 10 min by the 'EBL claim' task) collect the key once approved, wire sync
   py autosync.py requests | approve <email> | deny <email>    owner PC only, fallback to the WhatsApp link
 
@@ -191,7 +191,7 @@ def sync(folder, verbose=False, force=False):
         say(f"server not reachable ({ex.__class__.__name__}); will try again later"); log(f"connect failed {ex.__class__.__name__} for {root}"); return "offline"
     try:
         code, o, e = P.run(c, f"test -d {posixpath.join(P.SHELF, env['USER'])} && echo ok || echo missing")
-        if "ok" not in o: say("your shelf does not exist on the server yet; ask Alif"); log("shelf missing"); return "noshelf"
+        if "ok" not in o: say("your shelf does not exist on the server yet; ask the EBL admin"); log("shelf missing"); return "noshelf"
         sftp = c.open_sftp(); P.sftp_mkdirs(sftp, dest)
         n = 0
         if full:
@@ -201,7 +201,7 @@ def sync(folder, verbose=False, force=False):
                 P.sftp_mkdirs(sftp, posixpath.dirname(remote))
                 sftp.put(str(root / rel), remote); n += 1
         note = ""
-        if too_big: note = f"\n_Too many files ({len(sendable)}) to copy automatically; one page recorded. Add a .publishignore or ask Alif._\n"
+        if too_big: note = f"\n_Too many files ({len(sendable)}) to copy automatically; one page recorded. Add a .publishignore or ask the EBL admin._\n"
         if not (root / "PROJECT.md").exists() or not full:
             with sftp.open(posixpath.join(dest, "PROJECT.md"), "w") as f: f.write(one_pager(root, env, ptype, fields, note))
             if not full: n = 1
@@ -299,7 +299,7 @@ def join_code(code_str):
     j["status"] = "pending"; JOIN_FILE.write_text(json.dumps(j), encoding="utf-8")
     tr = f'"{pythonw()}" "{HERE / "autosync.py"}" claim'
     subprocess.run(["schtasks", "/Create", "/F", "/SC", "MINUTE", "/MO", "10", "/TN", "EBL claim", "/TR", tr], capture_output=True)
-    print("Mailbox verified. Alif has been asked to approve your EBL space. This PC will finish setting itself up on its own once he does; you can close this window.")
+    print("Mailbox verified. EBL has been asked to approve your space. This PC will finish setting itself up on its own once approved. You can close this window.")
     claim(quiet=True); return 0
 
 

@@ -2,5 +2,5 @@
   "name": "ebl",
   "description": "The one EBL skill for Ebenezer Logistics Claude users: publish any project and its PROJECT.md to the company shelf.",
   "version": "1.2.0",
-  "author": { "name": "Ebenezer Logistics", "email": "alif@ebl.sg" }
+  "author": { "name": "Ebenezer Logistics" }
 }
