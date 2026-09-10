@@ -3,7 +3,7 @@ name: ebl
 description: The one EBL skill for every Ebenezer Logistics Claude user. Keeps every project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md on EBL's shelf on the company DigitalOcean server, automatically after each turn and nightly, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, ebl sync off, ebl sync on, ebl sync now, set me up for EBL, or update the EBL skill. Never touches a running program.
 ---
 
-# /ebl  (skill version 1.1.0)
+# /ebl  (skill version 1.2.0)
 
 You are helping an Ebenezer Logistics (EBL) employee keep their project on the company shelf. The employee may be
 non-technical. Plain language, one question at a time, lead with the result. No em dashes.
@@ -37,7 +37,9 @@ now, or wants to see exactly what goes up.
 | `/ebl`, "publish to EBL", "register this", "update the EBL record" | **Publish** the current project folder now, with a carefully written PROJECT.md (procedure below) |
 | "ebl status" | Show what the shelf holds for this project and, if it declares a process, whether it is online |
 | "ebl list" | (owner only) Table every project on the shelf from every builder, with flags |
-| "ebl check", "set me up for EBL", first run ever | Run `check`, then `autosync.py status`, and walk them through anything missing |
+| "join EBL", "I need an EBL space", or `check` says settings MISSING and there is no request in progress | **Join** (below): ask their full name, then their @ebl.sg email, run `autosync.py join --name .. --email ..`; ask for the six-digit code from that mailbox, run `autosync.py join-code <code>`. Then tell them: Alif has been asked, the PC finishes on its own, nothing more to do |
+| "ebl check", "set me up for EBL" | Run `check`, then `autosync.py status`, and walk them through anything missing |
+| owner only: "ebl requests", "approve <email>", "deny <email>" | `autosync.py requests` / `approve <email>` / `deny <email>`. Fallback for when the WhatsApp Approve link is not to hand |
 | "ebl sync off" / "ebl sync on" | `autosync.py off` / `on`. Pauses or resumes all automatic syncing on this PC. Confirm in one line |
 | "ebl sync now" | `autosync.py now "<folder>"` and report the one-line result |
 | "update the EBL skill", or once a week when you happen to run this skill | Run `version`; if an update is available, tell them to run the install line from https://ebl.sg/claude again |
@@ -49,14 +51,20 @@ py "<this skill folder>/scripts/autosync.py" <status|now|off|on|install|all> ["<
 ```
 If `py` is not found, try `python`. If the script says paramiko is missing, run `py -m pip install paramiko`.
 
-## First run: check
+## Joining (how a new person gets their space, no file handed around)
 
-Run `check`. It reports four lines: python and paramiko, settings, server, shelf. Fix in order:
-- **Settings missing**: the file is `%USERPROFILE%\.ebl\publish.env`. Alif gives each person their own file when
-  they join. Tell the user to ask Alif for it and save it at that path. Never ask them to paste its contents into
-  the chat. Never write a password into any file yourself.
-- **Shelf missing**: only Alif can create it. Tell the user to message Alif.
-When `check` prints READY, say so and stop.
+The installer normally does this in PowerShell right after the paste. If it could not (no keyboard, or the user
+came to you first), do it in chat, one question at a time: full name, then @ebl.sg email. Run
+`autosync.py join --name "<name>" --email <email>`. A six-digit code is emailed to that mailbox (proof they own it).
+Ask for the code, run `autosync.py join-code <code>`. From then on the PC checks every ten minutes on its own;
+when Alif taps Approve on his phone, the key arrives, the settings file is written, automatic sync is wired.
+Tell the user plainly: "Alif has been asked. Your PC will finish by itself. Nothing to do." Never ask anyone to
+paste a password or a settings file into the chat. Never write a password into any file yourself.
+
+## Check
+
+Run `check`. Four lines: python and paramiko, settings, server, shelf. If settings are missing and no request is
+in progress, go to Joining. If the shelf is missing, only Alif can create it. When `check` prints READY, say so.
 
 ## Procedure for publishing
 

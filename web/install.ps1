@@ -48,15 +48,32 @@ if ($py) {
   Write-Host "  python: NOT FOUND. Install Python 3 from https://www.python.org/downloads/ (tick 'Add to PATH'), then run this line again." -ForegroundColor Yellow
 }
 
-$envFile = Join-Path $eblDir "publish.env"
+$envFile  = Join-Path $eblDir "publish.env"
+$joinFile = Join-Path $eblDir "join.json"
+$auto     = Join-Path $target "scripts\autosync.py"
 if (Test-Path $envFile) {
   Write-Host "  settings: found ($envFile)" -ForegroundColor Green
   Write-Host ""
-  Write-Host "Done. Open Claude Code and say: ebl check" -ForegroundColor Cyan
-} else {
-  Write-Host "  settings: not yet. Ask Alif for your EBL settings file and save it as:" -ForegroundColor Yellow
-  Write-Host "           $envFile"
+  Write-Host "Done. Nothing else to do." -ForegroundColor Cyan
+} elseif (Test-Path $joinFile) {
+  Write-Host "  a request is already waiting for Alif's approval; checking..." -ForegroundColor Yellow
+  if ($py) { & $py.Source $auto claim }
+} elseif ($py) {
+  # First time on this PC: ask for a space. Name, @ebl.sg email, the code from that mailbox. Then nothing, ever again.
   Write-Host ""
-  Write-Host "Then open Claude Code and say: ebl check" -ForegroundColor Cyan
+  Write-Host "Let's request your EBL space. Three answers, once." -ForegroundColor Cyan
+  try {
+    $name  = Read-Host "  Your full name"
+    $email = Read-Host "  Your @ebl.sg email"
+    & $py.Source $auto join --name "$name" --email "$email"
+    if ($LASTEXITCODE -eq 0) {
+      $code = Read-Host "  The six-digit code from that mailbox"
+      & $py.Source $auto join-code "$code"
+    }
+  } catch {
+    Write-Host "  (no keyboard here) Open Claude Code and say: join EBL" -ForegroundColor Yellow
+  }
+} else {
+  Write-Host "  Install Python first (see above), then run this line again." -ForegroundColor Yellow
 }
 Write-Host ""

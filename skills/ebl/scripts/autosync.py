@@ -15,6 +15,10 @@ Usage:
   py autosync.py all            sync every folder seen so far (the nightly task)
   py autosync.py off | on       pause / resume all automatic syncing on this PC
   py autosync.py status         what is paused, what was synced, when
+  py autosync.py join --name "Full Name" --email you@ebl.sg   ask for an EBL space (emails a 6-digit code)
+  py autosync.py join-code 123456                             prove the mailbox; Alif gets an Approve link
+  py autosync.py claim          (every 10 min by the 'EBL claim' task) collect the key once approved, wire sync
+  py autosync.py requests | approve <email> | deny <email>    owner PC only, fallback to the WhatsApp link
 
 Rules: personal or unclassified folders send ONE PAGE only (name, owner, folder), never their content.
 Anything that mentions EBL, ebl.sg, its bots or its systems is work and goes up in full, minus secrets.
@@ -255,6 +259,103 @@ def hook():
             log(f"could not start background sync: {ex}")
 
 
+# ---------- joining: request a space, prove the mailbox, collect the key once approved ----------
+
+JOIN_BASE = "https://ebl.sg/api/ebl-join"
+JOIN_FILE = EBL_DIR / "join.json"
+
+
+def _post(path, payload):
+    import urllib.request, urllib.error
+    req = urllib.request.Request(JOIN_BASE + path, data=json.dumps(payload).encode(), headers={"content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r: return r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as ex:
+        try: return ex.code, json.loads(ex.read() or b"{}")
+        except Exception: return ex.code, {}
+    except Exception as ex:
+        return 0, {"error": f"no connection ({ex.__class__.__name__})"}
+
+
+def join_start(name, email):
+    if P.env_path().exists(): print("This PC already has an EBL settings file. Nothing to request."); return 1
+    email = email.strip().lower()
+    if not re.match(r"^[a-z0-9._-]+@ebl\.sg$", email): print("The email must be an @ebl.sg address."); return 1
+    import secrets
+    ticket = secrets.token_hex(16)
+    code, r = _post("/start", {"name": name.strip(), "email": email, "pc": os.environ.get("COMPUTERNAME", ""), "ticket": ticket})
+    if code != 200: print(f"Could not send the code: {r.get('error', code)}"); return 1
+    EBL_DIR.mkdir(exist_ok=True)
+    JOIN_FILE.write_text(json.dumps({"ticket": ticket, "name": name.strip(), "email": email, "started": time.time(), "status": "code_sent"}), encoding="utf-8")
+    print(f"A six-digit code was emailed to {email}. It is valid for 15 minutes."); return 0
+
+
+def join_code(code_str):
+    try: j = json.loads(JOIN_FILE.read_text(encoding="utf-8"))
+    except Exception: print("No request in progress on this PC. Start with: join EBL"); return 1
+    code, r = _post("/verify", {"ticket": j["ticket"], "code": code_str.strip()})
+    if code != 200:
+        print(f"{r.get('error', 'Could not verify')}" + (f" ({r['left']} tries left)" if r.get("left") is not None else "")); return 1
+    j["status"] = "pending"; JOIN_FILE.write_text(json.dumps(j), encoding="utf-8")
+    tr = f'"{pythonw()}" "{HERE / "autosync.py"}" claim'
+    subprocess.run(["schtasks", "/Create", "/F", "/SC", "MINUTE", "/MO", "10", "/TN", "EBL claim", "/TR", tr], capture_output=True)
+    print("Mailbox verified. Alif has been asked to approve your EBL space. This PC will finish setting itself up on its own once he does; you can close this window.")
+    claim(quiet=True); return 0
+
+
+def claim(quiet=False):
+    """Called every 10 minutes by the 'EBL claim' task until the key arrives or the request is denied."""
+    say = (lambda *a: None) if quiet else print
+    if P.env_path().exists():
+        subprocess.run(["schtasks", "/Delete", "/F", "/TN", "EBL claim"], capture_output=True); JOIN_FILE.unlink(missing_ok=True); say("already set up"); return 0
+    try: j = json.loads(JOIN_FILE.read_text(encoding="utf-8"))
+    except Exception: subprocess.run(["schtasks", "/Delete", "/F", "/TN", "EBL claim"], capture_output=True); say("no request in progress"); return 1
+    import urllib.request, urllib.error
+    try:
+        with urllib.request.urlopen(f"{JOIN_BASE}/claim?ticket={j['ticket']}", timeout=30) as r: code, body = r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as ex:
+        code = ex.code
+        try: body = json.loads(ex.read() or b"{}")
+        except Exception: body = {}
+    except Exception as ex:
+        say(f"no connection ({ex.__class__.__name__}); will try again"); return 2
+    if code == 202: say(f"still waiting for approval ({body.get('status')})"); return 2
+    if code == 410 or code == 404:
+        subprocess.run(["schtasks", "/Delete", "/F", "/TN", "EBL claim"], capture_output=True); JOIN_FILE.unlink(missing_ok=True)
+        log(f"join ended: {body.get('status', code)}"); say(f"request {body.get('status', 'closed')}; nothing set up"); return 1
+    if code == 200 and body.get("key"):
+        k = body["key"]; EBL_DIR.mkdir(exist_ok=True)
+        P.env_path().write_text("".join(f"{a}={k[a]}\n" for a in ("HOST", "USER", "PASSWORD", "OWNER_NAME", "OWNER_EMAIL")), encoding="utf-8")
+        JOIN_FILE.unlink(missing_ok=True); subprocess.run(["schtasks", "/Delete", "/F", "/TN", "EBL claim"], capture_output=True)
+        log(f"key collected for {k['OWNER_EMAIL']} (server user {k['USER']}); wiring automatic sync")
+        if os.environ.get("EBL_SKIP_WIRING"): say("key saved (test mode: hooks not wired)"); return 0
+        install(); say("EBL space ready. Automatic sync is on."); return 0
+    say(f"unexpected answer {code}"); return 2
+
+
+# ---------- owner side: see and decide requests from Claude (fallback to the WhatsApp link) ----------
+
+def owner_admin(action, who=None):
+    env = P.load_env(strict=False)
+    if not env or env.get("ROLE", "").lower() != "owner": print("Only the owner PC can do this."); return 1
+    c = P.connect(env)
+    try:
+        code, tok, e = P.run(c, "python3 -c \"import json;print(json.load(open('/root/ebl-join/config.json'))['adminToken'])\"")
+        tok = tok.strip()
+        if action == "requests":
+            code, o, e = P.run(c, f"curl -s 'http://127.0.0.1:8096/api/ebl-join/admin/list?token={tok}'")
+            rows = json.loads(o or "{}").get("requests", [])
+            if not rows: print("No requests."); return 0
+            for r in sorted(rows, key=lambda r: r.get("created", 0), reverse=True):
+                print(f"{time.strftime('%d/%m %H:%M', time.localtime(r.get('created', 0)))}  {r.get('status', '?'):10s} {r.get('name', '?'):22s} {r.get('email', '?'):28s} PC {r.get('pc', '?')}  {('user ' + r['user']) if r.get('user') else ''}")
+            return 0
+        payload = json.dumps({"token": tok, "email": who, "action": action})
+        code, o, e = P.run(c, f"curl -s -X POST http://127.0.0.1:8096/api/ebl-join/admin/decide -H 'content-type: application/json' -d '{payload}'")
+        print(o.strip()); return 0
+    finally:
+        c.close()
+
+
 # ---------- install / uninstall ----------
 
 def settings_path():
@@ -329,4 +430,14 @@ if __name__ == "__main__":
     elif m == "off": EBL_DIR.mkdir(exist_ok=True); OFF.write_text("paused\n"); print("autosync paused on this PC")
     elif m == "on": OFF.unlink(missing_ok=True); print("autosync on")
     elif m == "status": status()
+    elif m == "join":
+        name = a[a.index("--name") + 1] if "--name" in a else ""; email = a[a.index("--email") + 1] if "--email" in a else ""
+        if not name or not email: sys.exit("usage: autosync.py join --name \"Full Name\" --email you@ebl.sg")
+        sys.exit(join_start(name, email))
+    elif m == "join-code": sys.exit(join_code(a[1] if len(a) > 1 else ""))
+    elif m == "claim": sys.exit(claim(quiet=len(a) > 1 and a[1] == "quiet"))
+    elif m == "requests": sys.exit(owner_admin("requests"))
+    elif m in ("approve", "deny"):
+        if len(a) < 2: sys.exit(f"usage: autosync.py {m} someone@ebl.sg")
+        sys.exit(owner_admin(m, a[1].strip().lower()))
     else: sys.exit(__doc__)
