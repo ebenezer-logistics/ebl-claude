@@ -2,17 +2,17 @@
 
 Two minutes, once per computer. Windows with Claude Code installed.
 
-## 1. Paste one line into Claude Code
-Open Claude Code, paste this, press Enter, say yes when Claude asks to run it:
+## 1. Paste one line into PowerShell
+Press the Windows key, type PowerShell, press Enter. Paste this line and press Enter:
 ```
-Run this in PowerShell and then follow what it prints: irm https://ebl.sg/claude/install.ps1 | iex
+irm https://ebl.sg/claude/install.ps1 | iex
 ```
 It downloads the `ebl` skill from EBL's GitHub into `%USERPROFILE%\.claude\skills\ebl\` and installs the one
-Python library it needs. (The `irm ...` part also works pasted straight into PowerShell.)
+Python library it needs. Run the same line again any time to update.
 
 ## 2. Answer three questions
-Claude asks you in the chat: your full name, your @ebl.sg email, and the six-digit code that arrives in that
-mailbox a few seconds later.
+The same window asks you: your full name, your @ebl.sg email, and the six-digit code that arrives in that mailbox
+a few seconds later. Then close the window.
 
 ## 3. Wait
 EBL is asked to approve your space. When approved, your PC finishes setting itself up on its own within ten
