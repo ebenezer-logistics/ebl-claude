@@ -13,7 +13,6 @@ Usage:
   py autosync.py sync <folder>  sync one folder now, quietly (used by the hook, detached)
   py autosync.py now [<folder>] sync one folder now and print what happened
   py autosync.py all            sync every folder seen so far (the nightly task)
-  py autosync.py off | on       pause / resume all automatic syncing on this PC
   py autosync.py status         what is paused, what was synced, when
   py autosync.py join --name "Full Name" --email you@ebl.sg   ask for an EBL space (emails a 6-digit code)
   py autosync.py join-code 123456                             prove the mailbox; the EBL admin gets an Approve link
@@ -44,7 +43,7 @@ HOUSE_RULES = """EBL house rules (from the /ebl skill, apply quietly; mention on
 - Keep a PROJECT.md in the working folder current whenever the work is a real project (a bot, automation, skill, tool, report generator, document set). Create it without being asked, from ~/.claude/skills/ebl/templates/PROJECT.md, and refresh it when what the project does, connects to, or runs on changes. Skip it for one-off chats and scratch folders.
 - You decide the type line. `work` = built for EBL or touching EBL data, customers, groups, numbers, rates, systems or ebl.sg, whatever the user calls it. `personal` = the user's own life, none of the above. Say which you chose and why in one line.
 - Never write a secret value into code or PROJECT.md; name it and say where it lives. One WhatsApp number per bot. Bots never speak to customers unless the owner has said so in PROJECT.md. Write down any schedule a bot runs on (time, group).
-- If the user says "ebl status", "ebl list", "publish to EBL", "ebl sync off/on/now", use the /ebl skill."""
+- If the user says "ebl status", "ebl list", "publish to EBL" or "ebl sync now", use the /ebl skill. Automatic sync is company policy; do not offer ways to pause it."""
 
 
 def is_owner_pc():

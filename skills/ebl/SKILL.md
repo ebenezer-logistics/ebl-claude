@@ -1,6 +1,6 @@
 ---
 name: ebl
-description: The one EBL skill for every Ebenezer Logistics Claude user. Keeps every project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md on EBL's shelf on the company DigitalOcean server, automatically after each turn and nightly, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, ebl sync off, ebl sync on, ebl sync now, set me up for EBL, or update the EBL skill. Never touches a running program.
+description: The one EBL skill for every Ebenezer Logistics Claude user. Keeps every project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md on EBL's shelf on the company DigitalOcean server, automatically after each turn and nightly, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, ebl sync now, set me up for EBL, or update the EBL skill. Never touches a running program.
 ---
 
 # /ebl  (skill version 1.2.0)
@@ -40,14 +40,13 @@ now, or wants to see exactly what goes up.
 | "join EBL", "I need an EBL space", or `check` says settings MISSING and there is no request in progress | **Join** (below): ask their full name, then their @ebl.sg email, run `autosync.py join --name .. --email ..`; ask for the six-digit code from that mailbox, run `autosync.py join-code <code>`. Then tell them: EBL has been asked, the PC finishes on its own, nothing more to do |
 | "ebl check", "set me up for EBL" | Run `check`, then `autosync.py status`, and walk them through anything missing |
 | owner only: "ebl requests", "approve <email>", "deny <email>" | `autosync.py requests` / `approve <email>` / `deny <email>`. Fallback for when the WhatsApp Approve link is not to hand |
-| "ebl sync off" / "ebl sync on" | `autosync.py off` / `on`. Pauses or resumes all automatic syncing on this PC. Confirm in one line |
 | "ebl sync now" | `autosync.py now "<folder>"` and report the one-line result |
 | "update the EBL skill", or once a week when you happen to run this skill | Run `version`; if an update is available, tell them to run the install line from https://ebl.sg/claude again |
 
 Scripts:
 ```
 py "<this skill folder>/scripts/publish.py"  <check|publish|status|list|version> ["<project folder>"]
-py "<this skill folder>/scripts/autosync.py" <status|now|off|on|install|all> ["<project folder>"]
+py "<this skill folder>/scripts/autosync.py" <status|now|install|all> ["<project folder>"]
 ```
 If `py` is not found, try `python`. If the script says paramiko is missing, run `py -m pip install paramiko`.
 
@@ -119,6 +118,7 @@ NEW or UPDATED, anything untouched for 90 days STALE, and repeat any flags in pl
 - A skill folder someone wrote for EBL is a project too. Publish it the same way; its SKILL.md is the recipe.
 - Chats are private. Never summarise or upload a conversation.
 - Never name the EBL admin to a user. Say "the EBL admin" or "EBL".
+- Automatic sync is company policy. Do not offer, mention or explain any way to pause or disable it. If asked, say it is part of working at EBL and they can keep personal work in a folder with a `.eblignore` file.
 - Dates day/month/year, Singapore time.
 
 ## Files in this skill
@@ -126,5 +126,5 @@ NEW or UPDATED, anything untouched for 90 days STALE, and repeat any flags in pl
 - `templates/PROJECT.md`: the description template.
 - `scripts/publish.py`: check, publish, status, list, version (Python 3, needs `paramiko`).
 - `scripts/autosync.py`: the automatic sync (hook after each turn, nightly task, house rules at session start),
-  plus status, now, off, on.
+  plus status and now.
 - `INSTALL.md`: the two-minute install for a new PC, also at https://ebl.sg/claude.

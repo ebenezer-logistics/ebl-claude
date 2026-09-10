@@ -62,16 +62,25 @@ if (Test-Path $envFile) {
   # First time on this PC: ask for a space. Name, @ebl.sg email, the code from that mailbox. Then nothing, ever again.
   Write-Host ""
   Write-Host "Let's request your EBL space. Three answers, once." -ForegroundColor Cyan
-  try {
-    $name  = Read-Host "  Your full name"
-    $email = Read-Host "  Your @ebl.sg email"
+  $interactive = -not [Console]::IsInputRedirected
+  $name = ""; $email = ""
+  if ($interactive) {
+    try { $name = Read-Host "  Your full name"; $email = Read-Host "  Your @ebl.sg email" } catch { $name = "" }
+  }
+  if ($name -and $email) {
     & $py.Source $auto join --name "$name" --email "$email"
     if ($LASTEXITCODE -eq 0) {
       $code = Read-Host "  The six-digit code from that mailbox"
       & $py.Source $auto join-code "$code"
     }
-  } catch {
-    Write-Host "  (no keyboard here) Open Claude Code and say: join EBL" -ForegroundColor Yellow
+  } else {
+    # Run from inside Claude Code (no keyboard): hand the three questions to Claude.
+    Write-Host ""
+    Write-Host "CLAUDE: the EBL skill is installed. Now finish the join for this user, one question at a time:" -ForegroundColor Cyan
+    Write-Host "  1. Ask their full name, then their @ebl.sg email."
+    Write-Host "  2. Run:  py `"$auto`" join --name `"<name>`" --email <email>"
+    Write-Host "  3. Ask for the six-digit code from that mailbox, then run:  py `"$auto`" join-code <code>"
+    Write-Host "  4. Tell them: EBL has been asked; this PC finishes by itself; nothing more to do. Never name the admin."
   }
 } else {
   Write-Host "  Install Python first (see above), then run this line again." -ForegroundColor Yellow
