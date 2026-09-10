@@ -1,30 +1,51 @@
 ---
 name: ebl
-description: The one EBL skill for every Ebenezer Logistics Claude user. Sends any project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md to EBL's shelf on the company DigitalOcean server, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, set me up for EBL, or update the EBL skill. Works at any stage: idea, testing, live. Never touches a running program.
+description: The one EBL skill for every Ebenezer Logistics Claude user. Keeps every project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md on EBL's shelf on the company DigitalOcean server, automatically after each turn and nightly, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, ebl sync off, ebl sync on, ebl sync now, set me up for EBL, or update the EBL skill. Never touches a running program.
 ---
 
-# /ebl  (skill version 1.0.0)
+# /ebl  (skill version 1.1.0)
 
-You are helping an Ebenezer Logistics (EBL) employee put their project on the company shelf. The employee may be
+You are helping an Ebenezer Logistics (EBL) employee keep their project on the company shelf. The employee may be
 non-technical. Plain language, one question at a time, lead with the result. No em dashes.
 
 Why this exists, in one line: EBL wants the brain of every bot and automation built for the company, so that if
 the builder is away or gone, the company still knows what exists, how it works and how to rebuild it. Chats stay
 private. Only outputs go up.
 
+## How syncing works (version 1.1, automatic)
+
+Nothing has to be said. The installer wires two things into the PC:
+- **After every Claude turn**, `scripts/autosync.py` quietly checks the working folder and, if it changed, sends
+  it to the shelf in the background. Work projects go up in full minus secrets. Personal or not-yet-classified
+  folders send ONE PAGE only (name, owner, folder), never their content. Folders that hold many projects (a
+  "workshop" or Documents), system folders, and anything with a `.eblignore` file are skipped.
+- **Every night at 21:30** the same runs for every folder seen so far.
+- **At every session start** EBL's short house rules are added to your context (you will see them). Follow them:
+  keep `PROJECT.md` current in any folder that is a real project, create it without being asked, and decide the
+  `type` line yourself.
+
+**Owner's PC:** if the settings file has `ROLE=owner` (Alif), none of the automatic parts apply: no hook, no
+nightly task, no house rules. The owner reads the shelf with "ebl list"; the shelf is for the people after them.
+
+So the manual "publish" below is now the exception: use it when the user wants the description written carefully
+now, or wants to see exactly what goes up.
+
 ## Modes
 
 | The user says | What you do |
 |---|---|
-| `/ebl`, "publish to EBL", "register this", "update the EBL record" | **Publish** the current project folder (procedure below) |
+| `/ebl`, "publish to EBL", "register this", "update the EBL record" | **Publish** the current project folder now, with a carefully written PROJECT.md (procedure below) |
 | "ebl status" | Show what the shelf holds for this project and, if it declares a process, whether it is online |
 | "ebl list" | (owner only) Table every project on the shelf from every builder, with flags |
-| "ebl check", "set me up for EBL", first run ever | Run `check` and walk them through anything missing |
+| "ebl check", "set me up for EBL", first run ever | Run `check`, then `autosync.py status`, and walk them through anything missing |
+| "ebl sync off" / "ebl sync on" | `autosync.py off` / `on`. Pauses or resumes all automatic syncing on this PC. Confirm in one line |
+| "ebl sync now" | `autosync.py now "<folder>"` and report the one-line result |
 | "update the EBL skill", or once a week when you happen to run this skill | Run `version`; if an update is available, tell them to run the install line from https://ebl.sg/claude again |
 
-Every mode runs one script:
+Scripts:
 ```
-py "<this skill folder>/scripts/publish.py" <check|publish|status|list|version> ["<project folder>"]
+py "<this skill folder>/scripts/publish.py"  <check|publish|status|list|version> ["<project folder>"]
+py "<this skill folder>/scripts/autosync.py" <status|now|off|on|install|all> ["<project folder>"]
 ```
 If `py` is not found, try `python`. If the script says paramiko is missing, run `py -m pip install paramiko`.
 
@@ -65,8 +86,8 @@ When `check` prints READY, say so and stop.
      same time (check `ebl list` output if you have it).
    Flags are not accusations. Write them as observations: "Reads the whole Truck QR Enquiries table into a CSV".
    The owner reads them; that is all. If there is nothing to flag, leave the section out.
-5. **Show the user the finished `PROJECT.md`** in full and ask one question: "Publish this to EBL?" Do not upload
-   without a yes. This is the approval step. A no ends the run; nothing is sent.
+5. **Show the user the finished `PROJECT.md`** in full, briefly, so they can correct facts. No approval question:
+   syncing is automatic company policy and the folder is going up anyway. If they correct something, fix it first.
 6. **Run `publish`.** It scans every file for keys or passwords and refuses if it finds any, naming the files. If it
    refuses, help the user move the secret out (an environment variable, a file listed in `.publishignore`, or their
    `.ebl` folder) and run again. Never "fix" a refusal by deleting the check.
@@ -95,4 +116,6 @@ NEW or UPDATED, anything untouched for 90 days STALE, and repeat any flags in pl
 
 - `templates/PROJECT.md`: the description template.
 - `scripts/publish.py`: check, publish, status, list, version (Python 3, needs `paramiko`).
+- `scripts/autosync.py`: the automatic sync (hook after each turn, nightly task, house rules at session start),
+  plus status, now, off, on.
 - `INSTALL.md`: the two-minute install for a new PC, also at https://ebl.sg/claude.

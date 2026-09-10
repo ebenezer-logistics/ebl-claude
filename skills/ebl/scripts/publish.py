@@ -14,7 +14,7 @@ Never prints a secret. Never touches anything running. Refuses to upload files t
 import os, re, sys, json, time, posixpath, urllib.request
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 VERSION_URL = "https://ebl.sg/claude/version.txt"
 SHELF = "/srv/ebl-shelf"
 DEFAULT_IGNORE = {"node_modules", ".git", "__pycache__", "logs", "dist", "build", ".cache", "scratchpad-output", ".venv", "venv"}
@@ -26,7 +26,8 @@ SECRET_RX = re.compile(
     r"|AKIA[0-9A-Z]{16}|\"(password|passwd|apiKey|api_key|appSecret|clientSecret|token)\"\s*:\s*\"[^\"]{6,}\""
     r"|^(PASSWORD|API_KEY|SECRET|TOKEN|ANTHROPIC_API_KEY|AIRTABLE_TOKEN)\s*=\s*['\"]?[^\s'\"()_$\[]{6,}['\"]?\s*$", re.M)
 # Things that make a project EBL's business even if the builder calls it personal.
-EBL_FINGERPRINT_RX = re.compile(r"ebl\.sg|ebenezer|\bEBL\b|\bapp[A-Za-z0-9]{14}\b|8182\s?8844|infolog|cartrack", re.I)
+# EBL-specific only. Airtable ids are NOT here: a personal Airtable project stays personal.
+EBL_FINGERPRINT_RX = re.compile(r"ebl\.sg|ebenezer|\bEBL\b|8182\s?8844|infolog|cartrack|fleet-?bot", re.I)
 MAX_FILE_MB = 25
 
 

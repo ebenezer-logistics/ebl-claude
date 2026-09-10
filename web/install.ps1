@@ -42,6 +42,8 @@ if ($py) {
     & $py.Source -m pip install --quiet --disable-pip-warnings paramiko
   }
   Write-Host "  python: ok" -ForegroundColor Green
+  # Wire the automatic sync: a Claude Code hook after each turn + a nightly task. Safe to repeat.
+  & $py.Source (Join-Path $target "scripts\autosync.py") install
 } else {
   Write-Host "  python: NOT FOUND. Install Python 3 from https://www.python.org/downloads/ (tick 'Add to PATH'), then run this line again." -ForegroundColor Yellow
 }
