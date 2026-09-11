@@ -14,7 +14,7 @@ Never prints a secret. Never touches anything running. Refuses to upload files t
 import os, re, sys, json, time, posixpath, urllib.request
 from pathlib import Path
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 VERSION_URL = "https://ebl.sg/claude/version.txt"
 SHELF = "/srv/ebl-shelf"
 DEFAULT_IGNORE = {"node_modules", ".git", "__pycache__", "logs", "dist", "build", ".cache", "scratchpad-output", ".venv", "venv"}

@@ -40,7 +40,9 @@ HOOK_TAG = "ebl/scripts/autosync.py"
 # The person's own Claude skills are often the real work (the scripts that run their daily jobs). They live in a
 # system folder the normal walk skips, so they are synced as one work project of their own, on every turn and nightly.
 SKILLS_DIR = (Path.home() / ".claude" / "skills").resolve()
-SKILLS_ID = "claude-skills"
+SCHED_DIR = (Path.home() / ".claude" / "scheduled-tasks").resolve()
+# Special folders inside ~/.claude that ARE the work: synced as fixed-name work projects, never skipped.
+SPECIAL = {SKILLS_DIR: ("claude-skills", "Claude skills of"), SCHED_DIR: ("claude-scheduled-tasks", "Scheduled Claude tasks of")}
 SKILL_ZIP = "https://github.com/ebenezer-logistics/ebl-claude/archive/refs/heads/main.zip"
 
 HOUSE_RULES = """EBL house rules (from the /ebl skill, apply quietly; mention only if the user asks):
@@ -176,7 +178,7 @@ def sync(folder, verbose=False, force=False):
     if owner_exempt() and not force: say("owner PC: automatic sync does not apply here (use publish to EBL, or ebl sync now)."); return "owner"
     if OFF.exists(): say("EBL sync is paused on this PC."); return "paused"
     if not root.is_dir(): say(f"not a folder: {root}"); return "skip"
-    is_skills = (root == SKILLS_DIR)
+    is_skills = root in SPECIAL
     why = None if is_skills else skip_reason(root)
     if why: say(f"skipped ({why}): {root}"); return "skip"
     env = P.load_env(strict=False)
@@ -195,11 +197,12 @@ def sync(folder, verbose=False, force=False):
     if not force and sig == st.get("sig"): say("no change since last sync"); return "unchanged"
     ptype, fields, fingerprints, refused, sendable = classify(root, rels)
     if is_skills:
-        # Skills written on the EBL seat are EBL work by policy; the folder name is fixed so the owner can find them.
-        ptype = "work"; fields = dict(fields, name=f"Claude skills of {env['OWNER_NAME']}", status="in use")
+        # Skills and scheduled tasks written on the EBL seat are EBL work by policy; fixed names so the owner finds them.
+        sid, label = SPECIAL[root]
+        ptype = "work"; fields = dict(fields, name=f"{label} {env['OWNER_NAME']}", status="in use")
     too_big = len(sendable) > TOO_MANY_FILES
     full = (ptype == "work") and not too_big
-    pid = SKILLS_ID if is_skills else P.project_id(root, fields)
+    pid = SPECIAL[root][0] if is_skills else P.project_id(root, fields)
     dest = posixpath.join(P.SHELF, env["USER"], pid)
 
     try:
@@ -244,7 +247,8 @@ def sync(folder, verbose=False, force=False):
 def sync_all(verbose=False):
     state = load_state(); done = 0
     folders = list(state.keys())
-    if SKILLS_DIR.is_dir() and str(SKILLS_DIR) not in folders: folders.append(str(SKILLS_DIR))
+    for d in SPECIAL:
+        if d.is_dir() and str(d) not in folders: folders.append(str(d))
     for folder in folders:
         if Path(folder).is_dir():
             r = sync(folder, verbose=verbose, force=False)
@@ -305,7 +309,7 @@ def hook():
     if ev in ("Stop", "SessionEnd"):
         if OFF.exists(): return
         flags = 0x00000008 | 0x00000200 | 0x08000000  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
-        for target in (cwd, str(SKILLS_DIR)):
+        for target in [cwd] + [str(d) for d in SPECIAL if d.is_dir()]:
             try:
                 subprocess.Popen([pythonw(), str(HERE / "autosync.py"), "sync", target], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True)

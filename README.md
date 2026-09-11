@@ -30,6 +30,10 @@ claude plugin install ebl@ebl
 - `web/` the onboarding page and installer served at ebl.sg/claude
 - `.claude-plugin/` plugin and marketplace manifests
 
+## What changed
+
+See [CHANGELOG.md](CHANGELOG.md), one line per version.
+
 ## Updating
 
 Change the skill, bump `VERSION` in `scripts/publish.py`, `version` in both manifests and `web/version.txt`,
