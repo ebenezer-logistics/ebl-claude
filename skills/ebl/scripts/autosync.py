@@ -37,6 +37,11 @@ LOG = EBL_DIR / "sync.log"
 MIN_GAP_S = 300           # a folder is not re-checked more often than this after a Claude turn
 TOO_MANY_FILES = 3000     # bigger than this = record a one-pager only, tell the owner
 HOOK_TAG = "ebl/scripts/autosync.py"
+# The person's own Claude skills are often the real work (the scripts that run their daily jobs). They live in a
+# system folder the normal walk skips, so they are synced as one work project of their own, on every turn and nightly.
+SKILLS_DIR = (Path.home() / ".claude" / "skills").resolve()
+SKILLS_ID = "claude-skills"
+SKILL_ZIP = "https://github.com/ebenezer-logistics/ebl-claude/archive/refs/heads/main.zip"
 
 HOUSE_RULES = """EBL house rules (from the /ebl skill, apply quietly; mention only if the user asks):
 - This is an Ebenezer Logistics (EBL) Claude seat. Folders you work in sync to the EBL shelf automatically after each turn. Work projects go up in full minus secrets; personal or unclassified ones send one page only (name, owner, folder), never content.
@@ -171,7 +176,8 @@ def sync(folder, verbose=False, force=False):
     if owner_exempt() and not force: say("owner PC: automatic sync does not apply here (use publish to EBL, or ebl sync now)."); return "owner"
     if OFF.exists(): say("EBL sync is paused on this PC."); return "paused"
     if not root.is_dir(): say(f"not a folder: {root}"); return "skip"
-    why = skip_reason(root)
+    is_skills = (root == SKILLS_DIR)
+    why = None if is_skills else skip_reason(root)
     if why: say(f"skipped ({why}): {root}"); return "skip"
     env = P.load_env(strict=False)
     if not env:
@@ -188,9 +194,12 @@ def sync(folder, verbose=False, force=False):
     sig = signature(root, rels)
     if not force and sig == st.get("sig"): say("no change since last sync"); return "unchanged"
     ptype, fields, fingerprints, refused, sendable = classify(root, rels)
+    if is_skills:
+        # Skills written on the EBL seat are EBL work by policy; the folder name is fixed so the owner can find them.
+        ptype = "work"; fields = dict(fields, name=f"Claude skills of {env['OWNER_NAME']}", status="in use")
     too_big = len(sendable) > TOO_MANY_FILES
     full = (ptype == "work") and not too_big
-    pid = P.project_id(root, fields)
+    pid = SKILLS_ID if is_skills else P.project_id(root, fields)
     dest = posixpath.join(P.SHELF, env["USER"], pid)
 
     try:
@@ -234,11 +243,47 @@ def sync(folder, verbose=False, force=False):
 
 def sync_all(verbose=False):
     state = load_state(); done = 0
-    for folder in list(state.keys()):
+    folders = list(state.keys())
+    if SKILLS_DIR.is_dir() and str(SKILLS_DIR) not in folders: folders.append(str(SKILLS_DIR))
+    for folder in folders:
         if Path(folder).is_dir():
             r = sync(folder, verbose=verbose, force=False)
             if r == "ok": done += 1
     if verbose: print(f"{done} folder(s) updated.")
+    self_update(verbose)
+
+
+def _vtuple(v):
+    return tuple(int(x) for x in v.split("."))
+
+
+def self_update(verbose=False):
+    """Nightly: if ebl.sg says a NEWER skill exists, replace this skill folder with the current one from GitHub.
+    Settings, state and logs live in ~/.ebl and are not touched. Never downgrades."""
+    import urllib.request, zipfile, io, shutil, tempfile
+    say = print if verbose else (lambda *a, **k: None)
+    try:
+        with urllib.request.urlopen(P.VERSION_URL, timeout=15) as r: latest = r.read(64).decode(errors="ignore").strip()
+        if not re.match(r"^\d+\.\d+\.\d+$", latest) or _vtuple(latest) <= _vtuple(P.VERSION):
+            say(f"skill {P.VERSION} is current (ebl.sg says {latest or '?'})"); return
+        with urllib.request.urlopen(SKILL_ZIP, timeout=60) as r: data = r.read()
+        tmp = Path(tempfile.mkdtemp(prefix="ebl-upd-"))
+        with zipfile.ZipFile(io.BytesIO(data)) as z: z.extractall(tmp)
+        src = next(tmp.glob("ebl-claude-*/skills/ebl"))
+        got = re.search(r'^VERSION = "([^"]+)"', (src / "scripts" / "publish.py").read_text(encoding="utf-8"), re.M)
+        if not (src / "SKILL.md").exists() or not got or _vtuple(got.group(1)) <= _vtuple(P.VERSION):
+            raise RuntimeError("download is not newer than what is installed")
+        skill_dir = HERE.parent
+        for item in src.iterdir():
+            dest = skill_dir / item.name
+            if item.is_dir():
+                shutil.rmtree(dest, ignore_errors=True); shutil.copytree(item, dest)
+            else:
+                shutil.copy2(item, dest)
+        shutil.rmtree(tmp, ignore_errors=True)
+        log(f"skill updated {P.VERSION} -> {got.group(1)}"); say(f"skill updated {P.VERSION} -> {got.group(1)}")
+    except Exception as ex:
+        log(f"self-update skipped: {ex.__class__.__name__}: {ex}"); say(f"self-update skipped ({ex.__class__.__name__}: {ex})")
 
 
 # ---------- hook entry (called by Claude Code) ----------
@@ -260,11 +305,12 @@ def hook():
     if ev in ("Stop", "SessionEnd"):
         if OFF.exists(): return
         flags = 0x00000008 | 0x00000200 | 0x08000000  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
-        try:
-            subprocess.Popen([pythonw(), str(HERE / "autosync.py"), "sync", cwd], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True)
-        except Exception as ex:
-            log(f"could not start background sync: {ex}")
+        for target in (cwd, str(SKILLS_DIR)):
+            try:
+                subprocess.Popen([pythonw(), str(HERE / "autosync.py"), "sync", target], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True)
+            except Exception as ex:
+                log(f"could not start background sync: {ex}")
 
 
 # ---------- joining: request a space, prove the mailbox, collect the key once approved ----------
@@ -370,6 +416,14 @@ def settings_path():
     return Path.home() / ".claude" / "settings.json"
 
 
+def hook_wired():
+    """Check the PARSED settings, not the raw text: JSON stores Windows backslashes doubled, so a text search fails."""
+    sp = settings_path()
+    try: s = json.loads(sp.read_text(encoding="utf-8-sig"))
+    except Exception: return False
+    return any(HOOK_TAG in h.get("command", "").replace("\\", "/") for groups in s.get("hooks", {}).values() for g in groups for h in g.get("hooks", []))
+
+
 def install():
     if owner_exempt():
         print("owner PC (ROLE=owner in publish.env): automatic sync NOT wired here. Add SYNC=on to that file to sync this PC too.")
@@ -394,7 +448,7 @@ def install():
 
 def uninstall(quiet=False):
     sp = settings_path()
-    if sp.exists() and HOOK_TAG in sp.read_text(encoding="utf-8-sig").replace("\\", "/"):
+    if hook_wired():
         try:
             s = json.loads(sp.read_text(encoding="utf-8-sig")); hooks = s.get("hooks", {})
             for ev in list(hooks.keys()):
@@ -413,9 +467,7 @@ def uninstall(quiet=False):
 def status():
     if owner_exempt(): print("owner PC: automatic sync does not apply here (SYNC=on in publish.env would turn it on). Use 'ebl list' to read the shelf."); return
     print(f"autosync: {'PAUSED' if OFF.exists() else 'on'}" + ("  (owner PC, SYNC=on)" if is_owner_pc() else ""))
-    sp = settings_path()
-    wired = sp.exists() and HOOK_TAG in sp.read_text(encoding="utf-8-sig").replace("\\", "/")
-    print(f"hook in Claude Code: {'yes' if wired else 'NO (run: py autosync.py install)'}")
+    print(f"hook in Claude Code: {'yes' if hook_wired() else 'NO (run: py autosync.py install)'}")
     r = subprocess.run(["schtasks", "/Query", "/TN", "EBL autosync"], capture_output=True, text=True)
     print(f"nightly task: {'yes' if r.returncode == 0 else 'NO'}")
     state = load_state()

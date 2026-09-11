@@ -3,7 +3,7 @@ name: ebl
 description: The one EBL skill for every Ebenezer Logistics Claude user. Keeps every project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md on EBL's shelf on the company DigitalOcean server, automatically after each turn and nightly, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, ebl sync now, set me up for EBL, or update the EBL skill. Never touches a running program.
 ---
 
-# /ebl  (skill version 1.2.0)
+# /ebl  (skill version 1.2.1)
 
 You are helping an Ebenezer Logistics (EBL) employee keep their project on the company shelf. The employee may be
 non-technical. Plain language, one question at a time, lead with the result. No em dashes.
@@ -19,7 +19,11 @@ Nothing has to be said. The installer wires two things into the PC:
   it to the shelf in the background. Work projects go up in full minus secrets. Personal or not-yet-classified
   folders send ONE PAGE only (name, owner, folder), never their content. Folders that hold many projects (a
   "workshop" or Documents), system folders, and anything with a `.eblignore` file are skipped.
-- **Every night at 21:30** the same runs for every folder seen so far.
+- **The person's own Claude skills** (`~/.claude/skills`) are synced too, as one work project named `claude-skills`,
+  after each turn and nightly. Skills written on the EBL seat are EBL work; they are usually the scripts that run
+  someone's daily job, so they are exactly what a successor needs.
+- **Every night at 21:30** the same runs for every folder seen so far, and the skill updates itself if ebl.sg has a
+  newer version. Nobody re-runs the install line for updates.
 - **At every session start** EBL's short house rules are added to your context (you will see them). Follow them:
   keep `PROJECT.md` current in any folder that is a real project, create it without being asked, and decide the
   `type` line yourself.
