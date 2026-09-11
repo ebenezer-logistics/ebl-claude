@@ -23,7 +23,7 @@ Work in Claude Code as usual. Whatever you build for EBL is kept on the company 
 projects send only a one-page note. Chats are never sent.
 
 ## If something is missing
-- "py is not recognised": install Python 3 from https://www.python.org/downloads/ (tick "Add to PATH"), then run
-  the install line again.
+- No Python on the PC: the installer installs it for you (about a minute). If that fails, install Python 3 from
+  https://www.python.org/downloads/ (tick "Add python.exe to PATH"), open a new PowerShell and run the line again.
 - "Could not send the code": check the email is an @ebl.sg address, or try again in a minute.
 - Still waiting after a day: ask the EBL admin whether the request reached them.
