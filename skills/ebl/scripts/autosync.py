@@ -206,8 +206,7 @@ def sync(folder, verbose=False, force=False):
     if is_skills:
         # Skills and scheduled tasks written on the EBL seat are EBL work by policy; fixed names so the owner finds them.
         sid, label = SPECIAL[root]
-        items = sorted(d.name for d in root.iterdir() if d.is_dir() and not d.name.startswith(".")) if root == SKILLS_DIR else \
-                sorted(p.stem for p in root.glob("*") if p.is_file() and not p.name.startswith("."))
+        items = sorted(d.name for d in root.iterdir() if d.is_dir() and not d.name.startswith("."))  # one folder per skill or task
         what = (f"{len(items)} Claude skills this person can run by name: " if root == SKILLS_DIR else f"{len(items)} Claude tasks that run unattended on this PC: ") + ", ".join(items)
         ptype = "work"; fields = dict(fields, name=f"{label} {env['OWNER_NAME']}", status="in use", _what=what)
     too_big = len(sendable) > TOO_MANY_FILES
