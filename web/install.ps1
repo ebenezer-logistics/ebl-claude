@@ -8,27 +8,31 @@ $zipUrl  = "https://github.com/ebenezer-logistics/ebl-claude/archive/refs/heads/
 $skills  = Join-Path $env:USERPROFILE ".claude\skills"
 $target  = Join-Path $skills "ebl"
 $eblDir  = Join-Path $env:USERPROFILE ".ebl"
-$tmp     = Join-Path $env:TEMP ("ebl-claude-" + [guid]::NewGuid().ToString("N"))
+# Work folder for the download lives under the user's own .ebl folder, never in %TEMP%: on accounts with a space
+# in the name (e.g. "Xin Yi") Windows hands out a short path like C:\Users\XINYI~1\..., and PowerShell reads the
+# squiggle as "home folder", so Remove-Item fails. -LiteralPath everywhere for the same reason.
+$tmp     = Join-Path $eblDir ("tmp-install-" + [guid]::NewGuid().ToString("N"))
 
 Write-Host ""
 Write-Host "EBL: installing the /ebl skill for Claude Code" -ForegroundColor Cyan
 
+New-Item -ItemType Directory -Force -Path $eblDir | Out-Null
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $zip = Join-Path $tmp "ebl-claude.zip"
 Invoke-WebRequest -Uri $zipUrl -OutFile $zip -UseBasicParsing
-Expand-Archive -Path $zip -DestinationPath $tmp -Force
+Expand-Archive -LiteralPath $zip -DestinationPath $tmp -Force
 $src = Join-Path $tmp "ebl-claude-main\skills\ebl"
-if (-not (Test-Path (Join-Path $src "SKILL.md"))) { throw "Download looked wrong (no SKILL.md). Try again or tell the EBL admin." }
+if (-not (Test-Path -LiteralPath (Join-Path $src "SKILL.md"))) { throw "Download looked wrong (no SKILL.md). Try again or tell the EBL admin." }
 
 New-Item -ItemType Directory -Force -Path $skills | Out-Null
-if (Test-Path $target) { Remove-Item -Recurse -Force $target }
-Copy-Item -Recurse -Force $src $target
+if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+Copy-Item -LiteralPath $src -Destination $target -Recurse -Force
 # The old name, if this PC had the first version.
 $old = Join-Path $skills "ebl-publish"
-if (Test-Path $old) { Remove-Item -Recurse -Force $old; Write-Host "  removed the old ebl-publish skill (replaced by /ebl)" }
-Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
-
-New-Item -ItemType Directory -Force -Path $eblDir | Out-Null
+if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Recurse -Force; Write-Host "  removed the old ebl-publish skill (replaced by /ebl)" }
+try { Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction Stop } catch { }
+# Leftovers from any earlier interrupted run.
+try { Get-ChildItem -LiteralPath $eblDir -Directory -Filter "tmp-install-*" -ErrorAction Stop | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 $ver = (Select-String -Path (Join-Path $target "scripts\publish.py") -Pattern '^VERSION = "([^"]+)"').Matches[0].Groups[1].Value
 Write-Host "  skill installed: $target  (version $ver)" -ForegroundColor Green
 
@@ -56,11 +60,11 @@ if ($py) {
 $envFile  = Join-Path $eblDir "publish.env"
 $joinFile = Join-Path $eblDir "join.json"
 $auto     = Join-Path $target "scripts\autosync.py"
-if (Test-Path $envFile) {
+if (Test-Path -LiteralPath $envFile) {
   Write-Host "  settings: found ($envFile)" -ForegroundColor Green
   Write-Host ""
   Write-Host "Done. Nothing else to do." -ForegroundColor Cyan
-} elseif (Test-Path $joinFile) {
+} elseif (Test-Path -LiteralPath $joinFile) {
   Write-Host "  a request is already waiting for EBL's approval; checking..." -ForegroundColor Yellow
   if ($py) { & $py.Source $auto claim }
 } elseif ($py) {
