@@ -14,7 +14,7 @@ Never prints a secret. Never touches anything running. Refuses to upload files t
 import os, re, sys, json, time, posixpath, urllib.request
 from pathlib import Path
 
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 VERSION_URL = "https://ebl.sg/claude/version.txt"
 SHELF = "/srv/ebl-shelf"
 DEFAULT_IGNORE = {"node_modules", ".git", "__pycache__", "logs", "dist", "build", ".cache", "scratchpad-output", ".venv", "venv"}
@@ -114,6 +114,9 @@ def parse_project_md(text):
     fields["name"] = title.group(1).strip() if title else ""
     flags = re.search(r"^## EBL flags\s*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
     fields["flags"] = [l.strip().lstrip("-").strip() for l in flags.group(1).splitlines() if l.strip().startswith("-")] if flags else []
+    what = re.search(r"^## What it does\s*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+    first = next((l.strip() for l in what.group(1).splitlines() if l.strip() and not l.strip().startswith("<")), "") if what else ""
+    fields["what"] = re.sub(r"\s+", " ", first)
     return fields
 
 
@@ -232,14 +235,17 @@ def do_list(env):
         try: meta = json.loads(meta_txt)
         except Exception: meta = {}
         f = parse_project_md(pm)
-        rows.append((f.get("name") or meta.get("id", "?"), meta.get("type", "?"), meta.get("owner", "?"), f.get("status", "?"),
-                     f.get("runs where", "")[:36], meta.get("published_at", "?")[:16], str(len(meta.get("flags", []))) if meta.get("flags") else "",
-                     path.replace(SHELF + "/", "").replace("/PROJECT.md", "")))
-    hdr = ("Project", "Type", "Owner", "Status", "Runs where", "Published", "Flags", "Shelf path")
+        what = f.get("what", "")
+        if not what or what.lower().startswith("no description yet"): what = "(no description yet)"
+        rows.append((f.get("name") or meta.get("id", "?"), (what[:70] + "...") if len(what) > 73 else what, meta.get("owner", "?").split(" ")[0],
+                     f.get("status", "?")[:24], meta.get("published_at", "?")[5:16].replace("T", " "),
+                     str(len(meta.get("flags", []))) if meta.get("flags") else "", path.replace(SHELF + "/", "").replace("/PROJECT.md", "")))
+    hdr = ("Project", "What it does", "Owner", "Status", "Updated", "Flags", "Shelf path")
     w = [max(len(str(r[i])) for r in rows + [hdr]) for i in range(len(hdr))]
     print("  ".join(h.ljust(w[i]) for i, h in enumerate(hdr)))
     for r in rows: print("  ".join(str(r[i]).ljust(w[i]) for i in range(len(hdr))))
-    print(f"\n{len(rows)} project(s) on the EBL shelf.")
+    missing = [r[0] for r in rows if r[1] == "(no description yet)"]
+    print(f"\n{len(rows)} project(s) on the EBL shelf." + (f"  {len(missing)} still without a description: " + ", ".join(missing) if missing else ""))
     if ev.strip():
         print("\nRecent flags:"); print(ev.strip())
 

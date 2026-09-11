@@ -1,6 +1,8 @@
-# <Project name>
+# <Area: what it does>
 
-<!-- Written for a colleague who has never seen this project. Plain language. No secret values, ever. -->
+<!-- Title = "Area: what it does", e.g. "BK: daily veg picklist from customer orders". Areas: Fleet, Container, BK,
+     Luckin, Infolog, Leasing, Sales, Admin, HR, Finance, Platform, or the customer's name. Never the folder name.
+     Written for a colleague who has never seen this project. Plain language. No secret values, ever. -->
 
 | | |
 |---|---|

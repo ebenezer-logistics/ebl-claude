@@ -3,7 +3,7 @@ name: ebl
 description: The one EBL skill for every Ebenezer Logistics Claude user. Keeps every project (bot, automation, skill, tool, document set) and its plain-English PROJECT.md on EBL's shelf on the company DigitalOcean server, automatically after each turn and nightly, so the company can see, understand, recover and reuse what was built. Use when the user says /ebl, publish to EBL, register this project, update the EBL record, put this on the company server, ebl status, ebl list, ebl check, ebl sync now, set me up for EBL, or update the EBL skill. Never touches a running program.
 ---
 
-# /ebl  (skill version 1.2.2)
+# /ebl  (skill version 1.2.3)
 
 You are helping an Ebenezer Logistics (EBL) employee keep their project on the company shelf. The employee may be
 non-technical. Plain language, one question at a time, lead with the result. No em dashes.

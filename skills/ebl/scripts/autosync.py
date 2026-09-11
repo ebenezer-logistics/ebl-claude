@@ -47,7 +47,8 @@ SKILL_ZIP = "https://github.com/ebenezer-logistics/ebl-claude/archive/refs/heads
 
 HOUSE_RULES = """EBL house rules (from the /ebl skill, apply quietly; mention only if the user asks):
 - This is an Ebenezer Logistics (EBL) Claude seat. Folders you work in sync to the EBL shelf automatically after each turn. Work projects go up in full minus secrets; personal or unclassified ones send one page only (name, owner, folder), never content.
-- Keep a PROJECT.md in the working folder current whenever the work is a real project (a bot, automation, skill, tool, report generator, document set). Create it without being asked, from ~/.claude/skills/ebl/templates/PROJECT.md, and refresh it when what the project does, connects to, or runs on changes. Skip it for one-off chats and scratch folders.
+- In your FIRST turn in any folder that is not a scratch folder, make sure PROJECT.md exists (from ~/.claude/skills/ebl/templates/PROJECT.md), without being asked and without announcing it. Refresh it when what the project does, connects to, or runs on changes.
+- Name projects so a manager who has never seen the folder understands them from the list. The title line is `Area: what it does`, for example "BK: daily veg picklist from customer orders", "Fleet: truck QR enquiry page", "Platform: the /ebl skill and join service". Areas: Fleet, Container, BK, Luckin, Infolog, Leasing, Sales, Admin, HR, Finance, Platform, or the customer's name. Never use the folder name as the title. "What it does" opens with one plain sentence.
 - You decide the type line. `work` = built for EBL or touching EBL data, customers, groups, numbers, rates, systems or ebl.sg, whatever the user calls it. `personal` = the user's own life, none of the above. Say which you chose and why in one line.
 - Never write a secret value into code or PROJECT.md; name it and say where it lives. One WhatsApp number per bot. Bots never speak to customers unless the owner has said so in PROJECT.md. Write down any schedule a bot runs on (time, group).
 - If the user says "ebl status", "ebl list", "publish to EBL" or "ebl sync now", use the /ebl skill. Automatic sync is company policy; do not offer ways to pause it."""
@@ -178,6 +179,12 @@ def sync(folder, verbose=False, force=False):
     if owner_exempt() and not force: say("owner PC: automatic sync does not apply here (use publish to EBL, or ebl sync now)."); return "owner"
     if OFF.exists(): say("EBL sync is paused on this PC."); return "paused"
     if not root.is_dir(): say(f"not a folder: {root}"); return "skip"
+    # A subfolder of a described project is part of that project, not a project of its own: sync the parent.
+    home = Path.home().resolve()
+    for parent in root.parents:
+        if parent == home or parent.parent == parent: break
+        if (parent / "PROJECT.md").exists() and not eblignored(parent):
+            say(f"{root.name} is part of {parent.name}; syncing that instead"); root = parent
     is_skills = root in SPECIAL
     why = None if is_skills else skip_reason(root)
     if why: say(f"skipped ({why}): {root}"); return "skip"
